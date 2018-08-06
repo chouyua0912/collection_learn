@@ -38,7 +38,7 @@ import sun.misc.SharedSecrets;
 
 /**
  * Hash table based implementation of the <tt>Map</tt> interface.  This
- * implementation provides all of the optional map operations, and permits
+ * implementation provides all of the optional map operations, and permits      允许null值，线程不安全
  * <tt>null</tt> values and the <tt>null</tt> key.  (The <tt>HashMap</tt>
  * class is roughly equivalent to <tt>Hashtable</tt>, except that it is
  * unsynchronized and permits nulls.)  This class makes no guarantees as to
@@ -253,14 +253,14 @@ public class HashMap<K,V> extends AbstractMap<K,V>
      * bin with at least this many nodes. The value must be greater
      * than 2 and should be at least 8 to mesh with assumptions in
      * tree removal about conversion back to plain bins upon
-     * shrinkage.
+     * shrinkage.                                                       树化阈值
      */
     static final int TREEIFY_THRESHOLD = 8;
 
     /**
      * The bin count threshold for untreeifying a (split) bin during a
      * resize operation. Should be less than TREEIFY_THRESHOLD, and at
-     * most 6 to mesh with shrinkage detection under removal.
+     * most 6 to mesh with shrinkage detection under removal.           反树化阈值
      */
     static final int UNTREEIFY_THRESHOLD = 6;
 
@@ -273,7 +273,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
     static final int MIN_TREEIFY_CAPACITY = 64;
 
     /**
-     * Basic hash bin node, used for most entries.  (See below for
+     * Basic hash bin node, used for most entries.  (See below for          桶内节点元素
      * TreeNode subclass, and in LinkedHashMap for its Entry subclass.)
      */
     static class Node<K,V> implements Map.Entry<K,V> {
@@ -388,12 +388,12 @@ public class HashMap<K,V> extends AbstractMap<K,V>
     /* ---------------- Fields -------------- */
 
     /**
-     * The table, initialized on first use, and resized as
+     * The table, initialized on first use, and resized as          首次使用的时候会去初始化
      * necessary. When allocated, length is always a power of two.
      * (We also tolerate length zero in some operations to allow
      * bootstrapping mechanics that are currently not needed.)
      */
-    transient Node<K,V>[] table;
+    transient Node<K,V>[] table;        // 元素数组（实际的桶）  是 Node的节点元素， Node泛型<K,V>
 
     /**
      * Holds cached entrySet(). Note that AbstractMap fields are used
@@ -424,14 +424,14 @@ public class HashMap<K,V> extends AbstractMap<K,V>
     // Additionally, if the table array has not been allocated, this
     // field holds the initial array capacity, or zero signifying
     // DEFAULT_INITIAL_CAPACITY.)
-    int threshold;
+    int threshold;              // 桶的上限(大小)
 
     /**
      * The load factor for the hash table.
      *
      * @serial
      */
-    final float loadFactor;
+    final float loadFactor;     // 装载因子     存的元素数目达到装载因子后会扩桶
 
     /* ---------------- Public operations -------------- */
 
@@ -566,7 +566,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
      */
     final Node<K,V> getNode(int hash, Object key) {
         Node<K,V>[] tab; Node<K,V> first, e; int n; K k;
-        if ((tab = table) != null && (n = tab.length) > 0 &&
+        if ((tab = table) != null && (n = tab.length) > 0 &&        // 已经有桶数组且大小大于0时候才会进入进行取数据
                 (first = tab[(n - 1) & hash]) != null) {
             if (first.hash == hash && // always check first node
                     ((k = first.key) == key || (key != null && key.equals(k))))
@@ -609,7 +609,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
      *         previously associated <tt>null</tt> with <tt>key</tt>.)
      */
     public V put(K key, V value) {
-        return putVal(hash(key), key, value, false, true);
+        return putVal(hash(key), key, value, false, true);  // 首先以key计算哈希
     }
 
     /**
@@ -619,54 +619,54 @@ public class HashMap<K,V> extends AbstractMap<K,V>
      * @param key the key
      * @param value the value to put
      * @param onlyIfAbsent if true, don't change existing value
-     * @param evict if false, the table is in creation mode.
+     * @param evict if false, the table is in creation mode.        反序列化时候添加元素有传fasle
      * @return previous value, or null if none
      */
     final V putVal(int hash, K key, V value, boolean onlyIfAbsent,
                    boolean evict) {
         Node<K,V>[] tab; Node<K,V> p; int n, i;
-        if ((tab = table) == null || (n = tab.length) == 0)
-            n = (tab = resize()).length;
-        if ((p = tab[i = (n - 1) & hash]) == null)
-            tab[i] = newNode(hash, key, value, null);
-        else {
-            Node<K,V> e; K k;
+        if ((tab = table) == null || (n = tab.length) == 0)         // 数组桶不存在
+            n = (tab = resize()).length;                            // 初始化数组桶 tab = table, n = tableSize
+        if ((p = tab[i = (n - 1) & hash]) == null)                  // (n-1)&hash 计算存储位置下标 p = previous, 没有值存在该位置   & : bitwise AND
+            tab[i] = newNode(hash, key, value, null);          // 新建节点存储（线程不安全的）
+        else {                                                      // 冲突  collision
+            Node<K,V> e; K k;                                       // p = 桶下标处的首节点
             if (p.hash == hash &&
                     ((k = p.key) == key || (key != null && key.equals(k))))
                 e = p;
             else if (p instanceof TreeNode)
                 e = ((TreeNode<K,V>)p).putTreeVal(this, tab, hash, key, value);
             else {
-                for (int binCount = 0; ; ++binCount) {
+                for (int binCount = 0; ; ++binCount) {               // 沿着链表查找
                     if ((e = p.next) == null) {
                         p.next = newNode(hash, key, value, null);
                         if (binCount >= TREEIFY_THRESHOLD - 1) // -1 for 1st
-                            treeifyBin(tab, hash);
+                            treeifyBin(tab, hash);                   // 转换为树结构
                         break;
                     }
-                    if (e.hash == hash &&
+                    if (e.hash == hash &&                            //
                             ((k = e.key) == key || (key != null && key.equals(k))))
                         break;
                     p = e;
                 }
             }
-            if (e != null) { // existing mapping for key
+            if (e != null) { // existing mapping for key        处理之前的值
                 V oldValue = e.value;
                 if (!onlyIfAbsent || oldValue == null)
-                    e.value = value;
-                afterNodeAccess(e);
+                    e.value = value;            // 更新值
+                afterNodeAccess(e);             // 留给子类覆盖
                 return oldValue;
             }
         }
         ++modCount;
         if (++size > threshold)
             resize();
-        afterNodeInsertion(evict);
+        afterNodeInsertion(evict);              // 留给子类覆盖
         return null;
     }
 
     /**
-     * Initializes or doubles table size.  If null, allocates in
+     * Initializes or doubles table size.  If null, allocates in        扩容桶
      * accord with initial capacity target held in field threshold.
      * Otherwise, because we are using power-of-two expansion, the
      * elements from each bin must either stay at same index, or move
