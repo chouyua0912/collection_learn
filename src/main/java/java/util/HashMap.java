@@ -38,7 +38,7 @@ import sun.misc.SharedSecrets;
 
 /**
  * Hash table based implementation of the <tt>Map</tt> interface.  This
- * implementation provides all of the optional map operations, and permits      允许null值，线程不安全
+ * implementation provides all of the optional map operations, and permits      允许null key, null value，线程不安全
  * <tt>null</tt> values and the <tt>null</tt> key.  (The <tt>HashMap</tt>
  * class is roughly equivalent to <tt>Hashtable</tt>, except that it is
  * unsynchronized and permits nulls.)  This class makes no guarantees as to
@@ -628,40 +628,40 @@ public class HashMap<K,V> extends AbstractMap<K,V>
         if ((tab = table) == null || (n = tab.length) == 0)         // 数组桶不存在
             n = (tab = resize()).length;                            // 初始化数组桶 tab = table, n = tableSize
         if ((p = tab[i = (n - 1) & hash]) == null)                  // (n-1)&hash 计算存储位置下标 p = previous, 没有值存在该位置   & : bitwise AND
-            tab[i] = newNode(hash, key, value, null);          // 新建节点存储（线程不安全的）
+            tab[i] = newNode(hash, key, value, null);          /** 新建节点存储（线程不安全的） **/
         else {                                                      // 冲突  collision
             Node<K,V> e; K k;                                       // p = 桶下标处的首节点
             if (p.hash == hash &&
-                    ((k = p.key) == key || (key != null && key.equals(k))))
+                    ((k = p.key) == key || (key != null && key.equals(k))))    /**  首届点相同key， 替换 **/
                 e = p;
-            else if (p instanceof TreeNode)
+            else if (p instanceof TreeNode) // 首节点是树节点
                 e = ((TreeNode<K,V>)p).putTreeVal(this, tab, hash, key, value);
-            else {
-                for (int binCount = 0; ; ++binCount) {               // 沿着链表查找
-                    if ((e = p.next) == null) {
-                        p.next = newNode(hash, key, value, null);
+            else {                          // 链表节点
+                for (int binCount = 0; ; ++binCount) {                   // 沿着链表查找
+                    if ((e = p.next) == null) {                          /** 搜索到尾巴没有重复key值，新添加节点 **/
+                        p.next = newNode(hash, key, value, null);   // 创新的节点链上
                         if (binCount >= TREEIFY_THRESHOLD - 1) // -1 for 1st
-                            treeifyBin(tab, hash);                   // 转换为树结构
+                            treeifyBin(tab, hash);                       // 转换为树结构
                         break;
                     }
-                    if (e.hash == hash &&                            //
+                    if (e.hash == hash &&                                /**  链表中找到相同key， 替换 **/
                             ((k = e.key) == key || (key != null && key.equals(k))))
                         break;
                     p = e;
                 }
-            }
-            if (e != null) { // existing mapping for key        处理之前的值
+            }   /** 覆盖旧键值 **/
+            if (e != null) { // existing mapping for key                 找到相同的key存在，替换value值
                 V oldValue = e.value;
                 if (!onlyIfAbsent || oldValue == null)
                     e.value = value;            // 更新值
-                afterNodeAccess(e);             // 留给子类覆盖
+                afterNodeAccess(e);             /** 留给子类覆盖 LinkedHashMap**/
                 return oldValue;
             }
         }
-        ++modCount;
-        if (++size > threshold)
-            resize();
-        afterNodeInsertion(evict);              // 留给子类覆盖
+        ++modCount;                             // 更新版本号
+        if (++size > threshold)                 // 总元素数更新，检查阈值
+            resize();                           // 重建桶
+        afterNodeInsertion(evict);              /** 留给子类覆盖 LinkedHashMap**/
         return null;
     }
 
@@ -1418,11 +1418,11 @@ public class HashMap<K,V> extends AbstractMap<K,V>
     abstract class HashIterator {
         Node<K,V> next;        // next entry to return
         Node<K,V> current;     // current entry
-        int expectedModCount;  // for fast-fail
+        int expectedModCount;  // for fast-fail 记录类似集合的版本号，每次更新操作会更新modCount，通过比对modCount来识别是否有其他人在同时更新
         int index;             // current slot
 
         HashIterator() {
-            expectedModCount = modCount;
+            expectedModCount = modCount;    // 创建的时候会记录当前的版本号
             Node<K,V>[] t = table;
             current = next = null;
             index = 0;
@@ -1438,7 +1438,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
         final Node<K,V> nextNode() {
             Node<K,V>[] t;
             Node<K,V> e = next;
-            if (modCount != expectedModCount)
+            if (modCount != expectedModCount)   // 比对创建时候的版本号，不匹配则抛出并行更新异常
                 throw new ConcurrentModificationException();
             if (e == null)
                 throw new NoSuchElementException();
