@@ -31,8 +31,8 @@ import java.util.function.UnaryOperator;
 import sun.misc.SharedSecrets;
 
 /**
- * Resizable-array implementation of the <tt>List</tt> interface.  Implements
- * all optional list operations, and permits all elements, including
+ * Resizable-array implementation of the <tt>List</tt> interface.  Implements       可以指定大小，但无法限制，元素装不下时候会自动扩容
+ * all optional list operations, and permits all elements, including                删除元素，在指定位置插入元素都会导致元素大量复制，添加效率搞，访问指定为止元素效率高
  * <tt>null</tt>.  In addition to implementing the <tt>List</tt> interface,
  * this class provides methods to manipulate the size of the array that is
  * used internally to store the list.  (This class is roughly equivalent to
@@ -135,16 +135,16 @@ public class ArrayList<E> extends AbstractList<E>
     transient Object[] elementData; // non-private to simplify nested class access
 
     /**
-     * The size of the ArrayList (the number of elements it contains).
+     * The size of the ArrayList (the number of elements it contains).      包含的元素数量    没有维护put，take游标，删除需要复制元素
      *
      * @serial
      */
-    private int size;
+    private int size;       // 当前元素数量
 
     /**
      * Constructs an empty list with the specified initial capacity.
      *
-     * @param  initialCapacity  the initial capacity of the list
+     * @param  initialCapacity  the initial capacity of the list                初始大小， 会无限扩容
      * @throws IllegalArgumentException if the specified initial capacity
      *         is negative
      */
@@ -205,10 +205,10 @@ public class ArrayList<E> extends AbstractList<E>
      * necessary, to ensure that it can hold at least the number of elements
      * specified by the minimum capacity argument.
      *
-     * @param   minCapacity   the desired minimum capacity
+     * @param   minCapacity   the desired minimum capacity      期望的最小容量
      */
     public void ensureCapacity(int minCapacity) {
-        int minExpand = (elementData != DEFAULTCAPACITY_EMPTY_ELEMENTDATA)
+        int minExpand = (elementData != DEFAULTCAPACITY_EMPTY_ELEMENTDATA)      // 0 或者 10
                 // any size if not default element table
                 ? 0
                 // larger than default for default empty table. It's already
@@ -216,12 +216,12 @@ public class ArrayList<E> extends AbstractList<E>
                 : DEFAULT_CAPACITY;
 
         if (minCapacity > minExpand) {
-            ensureExplicitCapacity(minCapacity);
+            ensureExplicitCapacity(minCapacity);                                // 每次添加元素都会增长一次
         }
     }
 
     private static int calculateCapacity(Object[] elementData, int minCapacity) {
-        if (elementData == DEFAULTCAPACITY_EMPTY_ELEMENTDATA) {
+        if (elementData == DEFAULTCAPACITY_EMPTY_ELEMENTDATA) {                 // 还没有的时候确认大小
             return Math.max(DEFAULT_CAPACITY, minCapacity);
         }
         return minCapacity;
@@ -235,7 +235,7 @@ public class ArrayList<E> extends AbstractList<E>
         modCount++;
 
         // overflow-conscious code
-        if (minCapacity - elementData.length > 0)
+        if (minCapacity - elementData.length > 0)   // 添加元素后的大小比数组长度大的时候扩容
             grow(minCapacity);
     }
 
@@ -256,13 +256,13 @@ public class ArrayList<E> extends AbstractList<E>
     private void grow(int minCapacity) {
         // overflow-conscious code
         int oldCapacity = elementData.length;
-        int newCapacity = oldCapacity + (oldCapacity >> 1);
+        int newCapacity = oldCapacity + (oldCapacity >> 1); // 增加一倍半   右移运算符，num >> 1,相当于num除以2
         if (newCapacity - minCapacity < 0)
             newCapacity = minCapacity;
         if (newCapacity - MAX_ARRAY_SIZE > 0)
             newCapacity = hugeCapacity(minCapacity);
         // minCapacity is usually close to size, so this is a win:
-        elementData = Arrays.copyOf(elementData, newCapacity);
+        elementData = Arrays.copyOf(elementData, newCapacity);      // 复制element到新创建扩容的数组，多余的空间填入null
     }
 
     private static int hugeCapacity(int minCapacity) {
@@ -430,9 +430,9 @@ public class ArrayList<E> extends AbstractList<E>
      * @throws IndexOutOfBoundsException {@inheritDoc}
      */
     public E get(int index) {
-        rangeCheck(index);
+        rangeCheck(index);              // 获取指定位置元素 输入索引index 范围检查
 
-        return elementData(index);
+        return elementData(index);      // 获取元素效率很高
     }
 
     /**
@@ -458,14 +458,14 @@ public class ArrayList<E> extends AbstractList<E>
      * @param e element to be appended to this list
      * @return <tt>true</tt> (as specified by {@link Collection#add})
      */
-    public boolean add(E e) {
-        ensureCapacityInternal(size + 1);  // Increments modCount!!
+    public boolean add(E e) {   /** 添加元素后 当前数组容纳不下时候会自动扩容1.5倍 **/
+        ensureCapacityInternal(size + 1);  // Increments modCount!!     确保容量足够
         elementData[size++] = e;
         return true;
     }
 
     /**
-     * Inserts the specified element at the specified position in this
+     * Inserts the specified element at the specified position in this          往指定位置插入数据
      * list. Shifts the element currently at that position (if any) and
      * any subsequent elements to the right (adds one to their indices).
      *
@@ -474,10 +474,10 @@ public class ArrayList<E> extends AbstractList<E>
      * @throws IndexOutOfBoundsException {@inheritDoc}
      */
     public void add(int index, E element) {
-        rangeCheckForAdd(index);
+        rangeCheckForAdd(index);    // 指定位置插入，index不合法  检查
 
         ensureCapacityInternal(size + 1);  // Increments modCount!!
-        System.arraycopy(elementData, index, elementData, index + 1,
+        System.arraycopy(elementData, index, elementData, index + 1,    // 复制数据 往后挪
                 size - index);
         elementData[index] = element;
         size++;
