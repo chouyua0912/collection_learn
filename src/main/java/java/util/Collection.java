@@ -30,8 +30,8 @@ import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 /**
- * The root interface in the <i>collection hierarchy</i>.  A collection
- * represents a group of objects, known as its <i>elements</i>.  Some
+ * The root interface in the <i>collection hierarchy</i>.  A collection             定义了add,remove,contains,iterator,spliterator
+ * represents a group of objects, known as its <i>elements</i>.  Some               Stream通过StreamSupport实现了将集合转化为stream对象支持函数式编程
  * collections allow duplicate elements and others do not.  Some are ordered
  * and others unordered.  The JDK does not provide any <i>direct</i>
  * implementations of this interface: it provides implementations of more
@@ -578,7 +578,7 @@ public interface Collection<E> extends Iterable<E> {
      * @since 1.8
      */
     default Stream<E> stream() {
-        return StreamSupport.stream(spliterator(), false);
+        return StreamSupport.stream(spliterator(), false);          // 通过StreamSupport生成 stream对象，子类只要实现spliterator方法
     }
 
     /**
@@ -600,5 +600,5 @@ public interface Collection<E> extends Iterable<E> {
      */
     default Stream<E> parallelStream() {
         return StreamSupport.stream(spliterator(), true);
-    }
+    }   // 生成并行的Stream
 }

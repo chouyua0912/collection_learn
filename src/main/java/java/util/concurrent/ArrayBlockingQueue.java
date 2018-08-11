@@ -53,7 +53,7 @@ import java.util.Spliterator;
  * are inserted at the tail of the queue, and the queue retrieval               put/take    会挂起线程直到执行成功为止
  * operations obtain elements at the head of the queue.
  *
- * <p>This is a classic &quot;bounded buffer&quot;, in which a
+ * <p>This is a classic &quot;bounded buffer&quot;, in which a                  由于只有一把锁，实际不论是put，take都无法同时进行，并发率低于LinkedBlockingQueue
  * fixed-sized array holds elements inserted by producers and
  * extracted by consumers.  Once created, the capacity cannot be
  * changed.  Attempts to {@code put} an element into a full queue
@@ -213,7 +213,7 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
                 if (next == items.length)   // 已经到数组尾巴，循环队列，跳回头部
                     next = 0;
                 if (next != putIndex) {     /** 还没有到结尾处 **/
-                    items[i] = items[next]; /** 往前挪一个位置，直到到了putIndex游标为止 **/
+                    items[i] = items[next]; /** 往前挪一个位置，直到到了putIndex游标为止 复制指针 **/
                     i = next;               // 继续往前挪
                 } else {
                     items[i] = null;
@@ -474,7 +474,7 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
     }
 
     /**
-     * Removes a single instance of the specified element from this queue,
+     * Removes a single instance of the specified element from this queue,      数组从头逐个比较，删除第一个equals的元素
      * if it is present.  More formally, removes an element {@code e} such
      * that {@code o.equals(e)}, if this queue contains one or more such
      * elements.
@@ -498,9 +498,9 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
         try {
             if (count > 0) {
                 final int putIndex = this.putIndex;
-                int i = takeIndex;
+                int i = takeIndex;                  // 从take查询一直到put
                 do {
-                    if (o.equals(items[i])) {
+                    if (o.equals(items[i])) {       // 沿着数组查找，找到了删除，然后移动数组元素（指针移动）
                         removeAt(i);
                         return true;
                     }
