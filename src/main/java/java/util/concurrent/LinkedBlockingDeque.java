@@ -46,22 +46,22 @@ import java.util.Spliterators;
 import java.util.function.Consumer;
 
 /**
- * An optionally-bounded {@linkplain BlockingDeque blocking deque} based on
- * linked nodes.
+ * An optionally-bounded {@linkplain BlockingDeque blocking deque} based on     允许头尾操作  双向链表组成 可以作为栈来使用  没有哨兵节点， first指向实际的首节点
+ * linked nodes.                                                                可以实现FILO， ArrayBlockingQueue和LinkedBlockingQueue只能实现FIFO
  *
  * <p>The optional capacity bound constructor argument serves as a
  * way to prevent excessive expansion. The capacity, if unspecified,
  * is equal to {@link Integer#MAX_VALUE}.  Linked nodes are
- * dynamically created upon each insertion unless this would bring the
+ * dynamically created upon each insertion unless this would bring the          动态创建 节点 -> GC
  * deque above capacity.
  *
  * <p>Most operations run in constant time (ignoring time spent
  * blocking).  Exceptions include {@link #remove(Object) remove},
  * {@link #removeFirstOccurrence removeFirstOccurrence}, {@link
  * #removeLastOccurrence removeLastOccurrence}, {@link #contains
- * contains}, {@link #iterator iterator.remove()}, and the bulk
- * operations, all of which run in linear time.
- *
+ * contains}, {@link #iterator iterator.remove()}, and the bulk                 两把锁也没法实现同时添加删除，因为线程可以同时在前后进行插入删除操作
+ * operations, all of which run in linear time.                                 如果一把锁控制插入，一把锁控制添加。只获取一把锁进行插入，则获取线程可以在相同为止进行删除，导致冲突
+ *                                                                              如果一把锁控制头变化，一把控制尾巴变化？？？
  * <p>This class and its iterator implement all of the
  * <em>optional</em> methods of the {@link Collection} and {@link
  * Iterator} interfaces.
@@ -115,17 +115,17 @@ public class LinkedBlockingDeque<E>
 
         /**
          * One of:
-         * - the real predecessor Node
-         * - this Node, meaning the predecessor is tail
-         * - null, meaning there is no predecessor
+         * - the real predecessor Node                      前驱节点
+         * - this Node, meaning the predecessor is tail     指向自己，表示前节点是尾巴
+         * - null, meaning there is no predecessor          null，表示没有前驱节点
          */
         Node<E> prev;
 
         /**
          * One of:
-         * - the real successor Node
-         * - this Node, meaning the successor is head
-         * - null, meaning there is no successor
+         * - the real successor Node                        后继节点
+         * - this Node, meaning the successor is head       指向自己，表示后继节点是头
+         * - null, meaning there is no successor            null，表示没有后继节点
          */
         Node<E> next;
 
@@ -135,16 +135,16 @@ public class LinkedBlockingDeque<E>
     }
 
     /**
-     * Pointer to first node.
-     * Invariant: (first == null && last == null) ||
-     *            (first.prev == null && first.item != null)
+     * Pointer to first node.                                       首节点
+     * Invariant: (first == null && last == null) ||                                Invariant：不变式，不变量
+     *            (first.prev == null && first.item != null)        first的pre是null item不是null
      */
     transient Node<E> first;
 
     /**
-     * Pointer to last node.
+     * Pointer to last node.                                        尾节点
      * Invariant: (first == null && last == null) ||
-     *            (last.next == null && last.item != null)
+     *            (last.next == null && last.item != null)          last的next是null，item不null
      */
     transient Node<E> last;
 
@@ -155,7 +155,7 @@ public class LinkedBlockingDeque<E>
     private final int capacity;
 
     /** Main lock guarding all access */
-    final ReentrantLock lock = new ReentrantLock();
+    final ReentrantLock lock = new ReentrantLock();                 // 所有操作只有一把锁
 
     /** Condition for waiting takes */
     private final Condition notEmpty = lock.newCondition();
@@ -211,36 +211,36 @@ public class LinkedBlockingDeque<E>
 
     // Basic linking and unlinking operations, called only while holding lock
 
-    /**
-     * Links node as first element, or returns false if full.
+    /** 只能从头尾添加，不允许从中间添加
+     * Links node as first element, or returns false if full.       持有锁状态下调用 添加新节点到头部       添加节点需要连接node的pre和 前驱节点的next
      */
     private boolean linkFirst(Node<E> node) {
         // assert lock.isHeldByCurrentThread();
         if (count >= capacity)
             return false;
-        Node<E> f = first;
+        Node<E> f = first;          // f：之前的头结点  node：新的头结点
         node.next = f;
         first = node;
-        if (last == null)
+        if (last == null)           // last==null -> first也是null -> 只有一个节点
             last = node;
         else
-            f.prev = node;
-        ++count;
-        notEmpty.signal();
+            f.prev = node;          // 设置之前的头结点的前驱节点
+        ++count;                    // 计数增加
+        notEmpty.signal();          // 通知notEmpty 可以取元素了
         return true;
     }
 
     /**
-     * Links node as last element, or returns false if full.
+     * Links node as last element, or returns false if full.        持有锁状态下调用  添加新节点到尾部
      */
     private boolean linkLast(Node<E> node) {
         // assert lock.isHeldByCurrentThread();
         if (count >= capacity)
             return false;
-        Node<E> l = last;
-        node.prev = l;
+        Node<E> l = last;           // l：之前的尾巴节点
+        node.prev = l;              // 链上新的节点到尾部，设置last为新节点
         last = node;
-        if (first == null)
+        if (first == null)          // 队列为空，初始化first
             first = node;
         else
             l.next = node;
@@ -250,21 +250,21 @@ public class LinkedBlockingDeque<E>
     }
 
     /**
-     * Removes and returns first element, or null if empty.
+     * Removes and returns first element, or null if empty.         持有锁时候调用 删除首节点     更新前驱节点的next，更新后继节点的pre
      */
     private E unlinkFirst() {
         // assert lock.isHeldByCurrentThread();
         Node<E> f = first;
-        if (f == null)
+        if (f == null)              // 还没有初始化
             return null;
         Node<E> n = f.next;
         E item = f.item;
         f.item = null;
-        f.next = f; // help GC
-        first = n;
-        if (n == null)
+        f.next = f; // help GC         自己指向自己，对元素的引用也去掉了，协助GC
+        first = n;                  // 更新指向新的头结点
+        if (n == null)              // 出队之后没有元素了，更新last为null
             last = null;
-        else
+        else                        // 队列里面还有元素，将头结点的pre置为null
             n.prev = null;
         --count;
         notFull.signal();
@@ -272,7 +272,7 @@ public class LinkedBlockingDeque<E>
     }
 
     /**
-     * Removes and returns last element, or null if empty.
+     * Removes and returns last element, or null if empty.          持有锁状态调用，删除尾巴节点
      */
     private E unlinkLast() {
         // assert lock.isHeldByCurrentThread();
@@ -282,30 +282,30 @@ public class LinkedBlockingDeque<E>
         Node<E> p = l.prev;
         E item = l.item;
         l.item = null;
-        l.prev = l; // help GC
-        last = p;
-        if (p == null)
+        l.prev = l; // help GC         自己指向自己，对元素的引用已经去掉，协助GC
+        last = p;                   // 更新last指向前驱节点
+        if (p == null)              // 队列空了
             first = null;
         else
-            p.next = null;
+            p.next = null;          // 队列还有元素，更新next为null
         --count;
         notFull.signal();
         return item;
     }
 
     /**
-     * Unlinks x.
+     * Unlinks x.                       持有锁，更新删除链表中间的节点
      */
     void unlink(Node<E> x) {
         // assert lock.isHeldByCurrentThread();
         Node<E> p = x.prev;
         Node<E> n = x.next;
-        if (p == null) {
+        if (p == null) {            // 前驱是头结点
             unlinkFirst();
-        } else if (n == null) {
+        } else if (n == null) {     // 后继是尾巴节点
             unlinkLast();
         } else {
-            p.next = n;
+            p.next = n;             // 中间节点，将队列维护起来，  前驱的next更新为后继，后继的pre更新为前驱
             n.prev = p;
             x.item = null;
             // Don't mess with x's links.  They may still be in use by
@@ -344,7 +344,7 @@ public class LinkedBlockingDeque<E>
         final ReentrantLock lock = this.lock;
         lock.lock();
         try {
-            return linkFirst(node);
+            return linkFirst(node);     // 获取到锁就可以添加了。。
         } finally {
             lock.unlock();
         }
@@ -375,8 +375,8 @@ public class LinkedBlockingDeque<E>
         final ReentrantLock lock = this.lock;
         lock.lock();
         try {
-            while (!linkFirst(node))
-                notFull.await();
+            while (!linkFirst(node))        // 只有一把锁，自己linkFirst失败了，只能是队列满了，因为其他线程没办法放进去，也没有线程可以取出来数据
+                notFull.await();            // 释放锁，等待消费掉了再进行插入
         } finally {
             lock.unlock();
         }
@@ -588,7 +588,7 @@ public class LinkedBlockingDeque<E>
         final ReentrantLock lock = this.lock;
         lock.lock();
         try {
-            for (Node<E> p = first; p != null; p = p.next) {
+            for (Node<E> p = first; p != null; p = p.next) {    // 从队列头搜索到队列尾巴
                 if (o.equals(p.item)) {
                     unlink(p);
                     return true;
@@ -605,7 +605,7 @@ public class LinkedBlockingDeque<E>
         final ReentrantLock lock = this.lock;
         lock.lock();
         try {
-            for (Node<E> p = last; p != null; p = p.prev) {
+            for (Node<E> p = last; p != null; p = p.prev) {     // 从队列尾巴搜索到队列头
                 if (o.equals(p.item)) {
                     unlink(p);
                     return true;
@@ -1036,12 +1036,12 @@ public class LinkedBlockingDeque<E>
      */
     private abstract class AbstractItr implements Iterator<E> {
         /**
-         * The next node to return in next()
+         * The next node to return in next()                                并发数据结构的Iterator都不限制版本，允许集合元素同时被改变
          */
         Node<E> next;
 
         /**
-         * nextItem holds on to item fields because once we claim that
+         * nextItem holds on to item fields because once we claim that      保证hasNext调用返回true，next方法一定能够返回元素 缓存在nextItem里面
          * an element exists in hasNext(), we must return item read
          * under lock (in advance()) even if it was in the process of
          * being removed when hasNext() was called.
@@ -1054,8 +1054,8 @@ public class LinkedBlockingDeque<E>
          */
         private Node<E> lastRet;
 
-        abstract Node<E> firstNode();
-        abstract Node<E> nextNode(Node<E> n);
+        abstract Node<E> firstNode();               // Node<E> firstNode() { return first; }
+        abstract Node<E> nextNode(Node<E> n);       // Node<E> nextNode(Node<E> n) { return n.next; }
 
         AbstractItr() {
             // set to initial position
@@ -1063,7 +1063,7 @@ public class LinkedBlockingDeque<E>
             lock.lock();
             try {
                 next = firstNode();
-                nextItem = (next == null) ? null : next.item;
+                nextItem = (next == null) ? null : next.item;   // 初始化的时候缓存数据元素
             } finally {
                 lock.unlock();
             }
@@ -1075,14 +1075,14 @@ public class LinkedBlockingDeque<E>
          */
         private Node<E> succ(Node<E> n) {
             // Chains of deleted nodes ending in null or self-links
-            // are possible if multiple interior nodes are removed.
+            // are possible if multiple interior nodes are removed.     移除了多个节点后，next可能是指向自己的，这时候直接返回first即可
             for (;;) {
-                Node<E> s = nextNode(n);
+                Node<E> s = nextNode(n);                    // 如果变化了，则找不到下一个元素了
                 if (s == null)
                     return null;
-                else if (s.item != null)
+                else if (s.item != null)                    // 队列内的节点
                     return s;
-                else if (s == n)
+                else if (s == n)                            // 已经出队的节点，next指向自己  返回first
                     return firstNode();
                 else
                     n = s;
@@ -1094,11 +1094,11 @@ public class LinkedBlockingDeque<E>
          */
         void advance() {
             final ReentrantLock lock = LinkedBlockingDeque.this.lock;
-            lock.lock();
+            lock.lock();                                        // 阻止所有的链表变化
             try {
                 // assert next != null;
-                next = succ(next);
-                nextItem = (next == null) ? null : next.item;
+                next = succ(next);                              // 尝试找后继节点
+                nextItem = (next == null) ? null : next.item;   // 找到了且有数据就缓存起来
             } finally {
                 lock.unlock();
             }
@@ -1108,13 +1108,13 @@ public class LinkedBlockingDeque<E>
             return next != null;
         }
 
-        public E next() {
+        public E next() {                               // next,hasNext都不需要锁，使用的缓存的数据
             if (next == null)
                 throw new NoSuchElementException();
             lastRet = next;
             E x = nextItem;
-            advance();
-            return x;
+            advance();                                  // 尝试去设置next和nextItem
+            return x;                                   // 返回缓存的数据
         }
 
         public void remove() {

@@ -47,7 +47,7 @@ import java.util.Spliterators;
 import java.util.function.Consumer;
 
 /**
- * An optionally-bounded {@linkplain BlockingQueue blocking queue} based on         可以是无界的队列   单向队列   不允许null值-> 使用null来区分头结点！！
+ * An optionally-bounded {@linkplain BlockingQueue blocking queue} based on         可以是无界的队列   单向队列   不允许null值-> 使用null来区分头结点！！   哨兵节点
  * linked nodes.
  * This queue orders elements FIFO (first-in-first-out).                            FIFO 队列，头是入队时间最长的节点 添加是在末尾添加，获取从头部获取
  * The <em>head</em> of the queue is that element that has been on the
@@ -202,19 +202,19 @@ public class LinkedBlockingQueue<E> extends AbstractQueue<E>
     }
 
     /**
-     * Removes a node from head of queue.   出队  队列操作，必须是持有锁状态下调用   初始化时候构造的head元素永远不变，修改他的next元素
+     * Removes a node from head of queue.   哨兵出队  队列操作，必须是持有锁状态下调用   初始化时候构造的head元素永远不变，修改他的next元素
      *                                      头结点从队列移除， 将第二个节点标记为新的 head， 并将该节点的数据返回
      * @return the node                     FIFO  从头获取
      */
     private E dequeue() {
         // assert takeLock.isHeldByCurrentThread();
         // assert head.item == null;
-        Node<E> h = head;
-        Node<E> first = h.next;
-        h.next = h; // help GC
-        head = first;           // 队列的第二个节点标记为 head
-        E x = first.item;       // 保存第二个节点的 元素（数据）
-        first.item = null;      // 清空第二个节点的元素 -》 作为head节点
+        Node<E> h = head;       // 记录哨兵                             哨兵的item永远为null，出队之后next指向自己   <-- 已出队哨兵
+        Node<E> first = h.next; // 记录首节点                            新哨兵的item被设置为null，next不变指向后继，item被返回
+        h.next = h; // help GC     哨兵自己指向自己
+        head = first;           // 首节点标记为哨兵    原来的哨兵已经出队
+        E x = first.item;       // 缓存新哨兵的item   元素（数据）
+        first.item = null;      // 清空新哨兵的item   新哨兵的next是不变的
         return x;
     }
 
@@ -426,8 +426,8 @@ public class LinkedBlockingQueue<E> extends AbstractQueue<E>
         } finally {
             putLock.unlock();
         }
-        if (c == 0)
-            signalNotEmpty();                   // 获取takeLock，通知notEmpty
+        if (c == 0)                             // 插入本元素之前如果数量是0，就通知还没有满  0说明所有take线程都在等待，或者被锁拦住
+            signalNotEmpty();                   // 获取takeLock，通知notEmpty            收到信号之后被移动到sync队列，竞争获取锁
         return c >= 0;
     }
 
@@ -448,7 +448,7 @@ public class LinkedBlockingQueue<E> extends AbstractQueue<E>
         } finally {
             takeLock.unlock();
         }
-        if (c == capacity)
+        if (c == capacity)              // 拿掉元素之前队列是满的，可能有线程卡在等待插入
             signalNotFull();
         return x;
     }
@@ -811,8 +811,8 @@ public class LinkedBlockingQueue<E> extends AbstractQueue<E>
         private Node<E> nextNode(Node<E> p) {
             for (;;) {
                 Node<E> s = p.next;
-                if (s == p)
-                    return head.next;
+                if (s == p)                     // 已出队哨兵   自己指向自己的时候需要从头head拿元素  出队多个元素之后，缓存的next已经
+                    return head.next;           // 从head.next获取
                 if (s == null || s.item != null)
                     return s;
                 p = s;
