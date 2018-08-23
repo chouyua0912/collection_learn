@@ -6,6 +6,8 @@ import java.util.TimeZone;
 class DateExample {
 
     void example() {
+        // 1535039210998
+        // 1535039240209 差３０秒
         System.out.println(System.currentTimeMillis());     // System.currentTimeMillis() 受人工修改时间的影响，但是不受时区变化影响，夏令时实行时候也是时区调整，不会影响epoch时间
         Date d1 = new Date();
         Date d2 = new Date(d1.getTime() + 10 * 1000);       // 时间记录的是　UTC 1970开始的时间　epoch时间，不受时区和夏令时影响
