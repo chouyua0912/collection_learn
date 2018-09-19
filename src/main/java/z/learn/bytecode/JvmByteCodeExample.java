@@ -1,4 +1,4 @@
-package z.learn;
+package z.learn.bytecode;
 
 /**
  * 方法执行的时候，入参被复制到本地变量表里，args->local variables table 复制
@@ -51,7 +51,7 @@ public class JvmByteCodeExample {
  Constant pool:
  #1 = Methodref          #11.#30        // java/lang/Object."<init>":()V
  #2 = Fieldref           #10.#31        // z/learn/JvmByteCodeExample.msg:Ljava/lang/String;
- #3 = Fieldref           #32.#33        // java/lang/System.out:Ljava/io/PrintStream;
+ #3 = Fieldref           #32.#33        // java/lang/System.out:Ljava/io/PrintStream;       System.out是PrintStream类型的
  #4 = Methodref          #34.#35        // java/io/PrintStream.println:(Ljava/lang/String;)V
  #5 = Class              #36            // z/learn/JvmByteCodeExample$Inner
  #6 = String             #37            // testInner

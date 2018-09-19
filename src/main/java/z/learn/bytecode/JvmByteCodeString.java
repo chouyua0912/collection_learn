@@ -1,4 +1,4 @@
-package z.learn;
+package z.learn.bytecode;
 
 /**
  * 并没有加载String.class生成Class对象
