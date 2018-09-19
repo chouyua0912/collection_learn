@@ -87,7 +87,7 @@ public class LambdaExample {
  *   private static void lambda$example$0(java.lang.String);
  *     Code:
  *        0: getstatic     #12                 // Field java/lang/System.out:Ljava/io/PrintStream;
- *        3: aload_0
+ *        3: aload_0                           // 在非静态方法中，aload_0 表示对this的操作，在static 方法中，aload_0表示对方法的第一参数的操作。  https://blog.csdn.net/DViewer/article/details/51138148
  *        4: invokevirtual #13                 // Method java/io/PrintStream.println:(Ljava/lang/String;)V
  *        7: return
  * }
