@@ -1,4 +1,4 @@
-package z.learn.lang;
+package z.learn.lang.dispatch;
 
 /**
  * Human h = new Man();
