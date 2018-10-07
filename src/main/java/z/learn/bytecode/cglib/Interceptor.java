@@ -1,13 +1,15 @@
 package z.learn.bytecode.cglib;
 
-import net.sf.cglib.proxy.Enhancer;
-import net.sf.cglib.proxy.MethodInterceptor;
-import net.sf.cglib.proxy.MethodProxy;
+import net.sf.cglib.proxy.*;
 
 import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * MethodInterceptor继承自callback
+ * Noop把不需要代理的方法过滤掉
+ */
 public class Interceptor implements MethodInterceptor {
 
     private Interceptor() {
@@ -28,9 +30,10 @@ public class Interceptor implements MethodInterceptor {
             synchronized (proxyCache) {
                 if (null == (obj = proxyCache.get(clazz))) {
                     Interceptor interceptor = new Interceptor();
+                    Callback[] callbacks = {interceptor, NoOp.INSTANCE};
                     Enhancer enhancer = new Enhancer();
                     enhancer.setSuperclass(clazz);
-                    enhancer.setCallback(interceptor);
+                    enhancer.setCallbacks(callbacks);       // 同时设置多个Callback，可以通过classFilter来筛选
                     enhancer.setCallbackFilter(new CallFilter());
                     obj = enhancer.create();
                     proxyCache.put(clazz, obj);
