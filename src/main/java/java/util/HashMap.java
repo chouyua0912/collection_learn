@@ -660,7 +660,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
         }
         ++modCount;                             // 更新版本号
         if (++size > threshold)                 // 总元素数更新，检查阈值
-            resize();                           // 重建桶
+            resize();                           // 扩容并重建桶
         afterNodeInsertion(evict);              /** 留给子类覆盖 LinkedHashMap**/
         return null;
     }
@@ -668,7 +668,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
     /**
      * Initializes or doubles table size.  If null, allocates in        扩容桶
      * accord with initial capacity target held in field threshold.
-     * Otherwise, because we are using power-of-two expansion, the
+     * Otherwise, because we are using power-of-two expansion, the      扩容的时候使用2的指数被扩容，原来的元素要么是在相同的index，要么2的指数倍的offset
      * elements from each bin must either stay at same index, or move
      * with a power of two offset in the new table.
      *
@@ -701,15 +701,15 @@ public class HashMap<K,V> extends AbstractMap<K,V>
         }
         threshold = newThr;
         @SuppressWarnings({"rawtypes","unchecked"})
-        Node<K,V>[] newTab = (Node<K,V>[])new Node[newCap];
+        Node<K,V>[] newTab = (Node<K,V>[])new Node[newCap];     // 创建新的数组
         table = newTab;
         if (oldTab != null) {
-            for (int j = 0; j < oldCap; ++j) {
+            for (int j = 0; j < oldCap; ++j) {                  // 复制旧数组的数据
                 Node<K,V> e;
                 if ((e = oldTab[j]) != null) {
                     oldTab[j] = null;
                     if (e.next == null)
-                        newTab[e.hash & (newCap - 1)] = e;
+                        newTab[e.hash & (newCap - 1)] = e;      // 保证在原来的位置
                     else if (e instanceof TreeNode)
                         ((TreeNode<K,V>)e).split(this, newTab, j, oldCap);
                     else { // preserve order
@@ -1073,7 +1073,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
         if ((e = getNode(hash(key), key)) != null &&
                 ((v = e.value) == oldValue || (v != null && v.equals(oldValue)))) {
             e.value = newValue;
-            afterNodeAccess(e);
+            afterNodeAccess(e);     // replace
             return true;
         }
         return false;
@@ -1085,7 +1085,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
         if ((e = getNode(hash(key), key)) != null) {
             V oldValue = e.value;
             e.value = value;
-            afterNodeAccess(e);
+            afterNodeAccess(e);     // replace
             return oldValue;
         }
         return null;
@@ -1120,7 +1120,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
             }
             V oldValue;
             if (old != null && (oldValue = old.value) != null) {
-                afterNodeAccess(old);
+                afterNodeAccess(old);       // computeIfAbsent
                 return oldValue;
             }
         }
@@ -1129,7 +1129,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
             return null;
         } else if (old != null) {
             old.value = v;
-            afterNodeAccess(old);
+            afterNodeAccess(old);       // computeIfAbsent
             return v;
         }
         else if (t != null)
@@ -1156,7 +1156,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
             V v = remappingFunction.apply(key, oldValue);
             if (v != null) {
                 e.value = v;
-                afterNodeAccess(e);
+                afterNodeAccess(e);     // computeIfAbsent
                 return v;
             }
             else
@@ -1198,7 +1198,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
         if (old != null) {
             if (v != null) {
                 old.value = v;
-                afterNodeAccess(old);
+                afterNodeAccess(old);       // compute
             }
             else
                 removeNode(hash, key, null, false, true);
@@ -1256,7 +1256,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
                 v = value;
             if (v != null) {
                 old.value = v;
-                afterNodeAccess(old);
+                afterNodeAccess(old);       // merge
             }
             else
                 removeNode(hash, key, null, false, true);
@@ -1797,7 +1797,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
     // Tree bins
 
     /**
-     * Entry for Tree bins. Extends LinkedHashMap.Entry (which in turn
+     * Entry for Tree bins. Extends LinkedHashMap.Entry (which in turn          红黑树实现
      * extends Node) so can be used as extension of either regular or
      * linked node.
      */
