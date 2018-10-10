@@ -277,7 +277,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
      * TreeNode subclass, and in LinkedHashMap for its Entry subclass.)
      */
     static class Node<K,V> implements Map.Entry<K,V> {
-        final int hash;
+        final int hash;         // 存储的是spread计算之后的hash值
         final K key;
         V value;
         Node<K,V> next;
@@ -336,7 +336,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
      */
     static final int hash(Object key) {
         int h;
-        return (key == null) ? 0 : (h = key.hashCode()) ^ (h >>> 16);
+        return (key == null) ? 0 : (h = key.hashCode()) ^ (h >>> 16);       // 把高16位清零，高16位右移，然后异或，降低只有高位变化的key值碰撞的概率
     }
 
     /**
@@ -628,8 +628,8 @@ public class HashMap<K,V> extends AbstractMap<K,V>
         if ((tab = table) == null || (n = tab.length) == 0)         // 数组桶不存在
             n = (tab = resize()).length;                            // 初始化数组桶 tab = table, n = tableSize
         if ((p = tab[i = (n - 1) & hash]) == null)                  // (n-1)&hash 计算存储位置下标 p = previous, 没有值存在该位置   & : bitwise AND
-            tab[i] = newNode(hash, key, value, null);          /** 新建节点存储（线程不安全的） **/
-        else {                                                      // 冲突  collision
+            tab[i] = newNode(hash, key, value, null);          /** 新建节点存储（线程不安全的） 子类可以覆盖，然后连接成LinkedHashMap 添加到双链表末尾 **/
+        else {                                                      // 冲突了！！！  collision
             Node<K,V> e; K k;                                       // p = 桶下标处的首节点
             if (p.hash == hash &&
                     ((k = p.key) == key || (key != null && key.equals(k))))    /**  首届点相同key， 替换 **/
@@ -639,7 +639,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
             else {                          // 链表节点
                 for (int binCount = 0; ; ++binCount) {                   // 沿着链表查找
                     if ((e = p.next) == null) {                          /** 搜索到尾巴没有重复key值，新添加节点 **/
-                        p.next = newNode(hash, key, value, null);   // 创新的节点链上
+                        p.next = newNode(hash, key, value, null);   /**  创新的节点链上  子类可以覆盖，然后连接成LinkedHashMap 添加到双链表末尾 **/
                         if (binCount >= TREEIFY_THRESHOLD - 1) // -1 for 1st
                             treeifyBin(tab, hash);                       // 转换为树结构
                         break;
@@ -661,7 +661,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
         ++modCount;                             // 更新版本号
         if (++size > threshold)                 // 总元素数更新，检查阈值
             resize();                           // 扩容并重建桶
-        afterNodeInsertion(evict);              /** 留给子类覆盖 LinkedHashMap**/
+        afterNodeInsertion(evict);              /** 留给子类覆盖 LinkedHashMap, 普通添加元素时候 evict=true**/
         return null;
     }
 
@@ -669,7 +669,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
      * Initializes or doubles table size.  If null, allocates in        扩容桶
      * accord with initial capacity target held in field threshold.
      * Otherwise, because we are using power-of-two expansion, the      扩容的时候使用2的指数被扩容，原来的元素要么是在相同的index，要么2的指数倍的offset
-     * elements from each bin must either stay at same index, or move
+     * elements from each bin must either stay at same index, or move   原来冲突在同一个bin的元素要么在新table索引到相同index，要么索引到N+index。
      * with a power of two offset in the new table.
      *
      * @return the table
@@ -704,15 +704,15 @@ public class HashMap<K,V> extends AbstractMap<K,V>
         Node<K,V>[] newTab = (Node<K,V>[])new Node[newCap];     // 创建新的数组
         table = newTab;
         if (oldTab != null) {
-            for (int j = 0; j < oldCap; ++j) {                  // 复制旧数组的数据
+            for (int j = 0; j < oldCap; ++j) {                  // 复制旧数组的数据，挨个数组元素遍历
                 Node<K,V> e;
-                if ((e = oldTab[j]) != null) {
+                if ((e = oldTab[j]) != null) {                  // bin处不为空，需要处理可能的链表或者红黑树
                     oldTab[j] = null;
-                    if (e.next == null)
-                        newTab[e.hash & (newCap - 1)] = e;      // 保证在原来的位置
+                    if (e.next == null)                         // 没有碰撞的元素，新的数组里面也不会有碰撞
+                        newTab[e.hash & (newCap - 1)] = e;      // 保证在原来的位置，或者是N+index位置
                     else if (e instanceof TreeNode)
                         ((TreeNode<K,V>)e).split(this, newTab, j, oldCap);
-                    else { // preserve order
+                    else { // preserve order                    链表操作重新分布到新数组
                         Node<K,V> loHead = null, loTail = null;
                         Node<K,V> hiHead = null, hiTail = null;
                         Node<K,V> next;
@@ -732,7 +732,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
                                     hiTail.next = e;
                                 hiTail = e;
                             }
-                        } while ((e = next) != null);
+                        } while ((e = next) != null);           // 处理链表的下一个节点
                         if (loTail != null) {
                             loTail.next = null;
                             newTab[j] = loHead;
@@ -1742,7 +1742,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
      * classes, and HashSet.
      */
 
-    // Create a regular (non-tree) node
+    // Create a regular (non-tree) node                     子类可以覆盖
     Node<K,V> newNode(int hash, K key, V value, Node<K,V> next) {
         return new Node<>(hash, key, value, next);
     }

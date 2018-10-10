@@ -35,8 +35,8 @@ import java.io.IOException;
  * with predictable iteration order.  This implementation differs from
  * <tt>HashMap</tt> in that it maintains a doubly-linked list running through   维护了双链表，
  * all of its entries.  This linked list defines the iteration ordering,        顺序是key插入的顺序
- * which is normally the order in which keys were inserted into the map
- * (<i>insertion-order</i>).  Note that insertion order is not affected
+ * which is normally the order in which keys were inserted into the map         插入顺序 insert-order
+ * (<i>insertion-order</i>).  Note that insertion order is not affected         LRU     access-order
  * if a key is <i>re-inserted</i> into the map.  (A key <tt>k</tt> is
  * reinserted into a map <tt>m</tt> if <tt>m.put(k, v)</tt> is invoked when
  * <tt>m.containsKey(k)</tt> would return <tt>true</tt> immediately prior to
@@ -210,7 +210,7 @@ public class LinkedHashMap<K,V>
 
     /**
      * The iteration ordering method for this linked hash map: <tt>true</tt>        指定维持顺序的方式
-     * for access-order, <tt>false</tt> for insertion-order.
+     * for access-order, <tt>false</tt> for insertion-order.                        false的时候是插入顺序
      *
      * @serial
      */
@@ -252,10 +252,10 @@ public class LinkedHashMap<K,V>
         head = tail = null;
     }
 
-    Node<K,V> newNode(int hash, K key, V value, Node<K,V> e) {
+    Node<K,V> newNode(int hash, K key, V value, Node<K,V> e) {      // e是下一个节点
         LinkedHashMap.Entry<K,V> p =
                 new LinkedHashMap.Entry<K,V>(hash, key, value, e);
-        linkNodeLast(p);
+        linkNodeLast(p);        // 连接到最后
         return p;
     }
 
@@ -294,7 +294,7 @@ public class LinkedHashMap<K,V>
             a.before = b;
     }
 
-    void afterNodeInsertion(boolean evict) { // possibly remove eldest
+    void afterNodeInsertion(boolean evict) { // possibly remove eldest      插入新的元素时候的处理扩展，是否要删除旧元素，默认是不删除的，子类覆盖可以实现删除
         LinkedHashMap.Entry<K,V> first;
         if (evict && (first = head) != null && removeEldestEntry(first)) {
             K key = first.key;
@@ -465,11 +465,11 @@ public class LinkedHashMap<K,V>
     }
 
     /**
-     * Returns <tt>true</tt> if this map should remove its eldest entry.
+     * Returns <tt>true</tt> if this map should remove its eldest entry.        留给子类扩展的，子类来决定是否要删除最旧的元素
      * This method is invoked by <tt>put</tt> and <tt>putAll</tt> after
      * inserting a new entry into the map.  It provides the implementor
      * with the opportunity to remove the eldest entry each time a new one
-     * is added.  This is useful if the map represents a cache: it allows
+     * is added.  This is useful if the map represents a cache: it allows       实现缓存时候方便删除过期的数据
      * the map to reduce memory consumption by deleting stale entries.
      *
      * <p>Sample use: this override will allow the map to grow up to 100
